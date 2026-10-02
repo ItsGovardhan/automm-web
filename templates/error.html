@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} | {% endblock %}
+{% block content %}
+<section class="auth center">
+  <div class="big-icon">{{ icon('alert', 40) }}</div>
+  <h1>{{ code }}</h1>
+  <p class="muted">{{ msg }}</p>
+  <a class="btn" href="{{ url_for('home') }}">Go to home</a>
+</section>
+{% endblock %}

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}{{ deal['id'] }} | {% endblock %}
+{% block content %}
+{% set st = status_meta[deal['status']] %}
+<div class="page-head deal-head">
+  <div>
+    <a class="back" href="{{ url_for('dashboard') }}">{{ icon('arrow-left', 16) }}<span>Dashboard</span></a>
+    <h1 class="mono">{{ deal['id'] }}
+      <button type="button" class="icon-btn" data-copy="{{ deal['id'] }}" aria-label="Copy deal ID">{{ icon('copy', 16) }}</button>
+    </h1>
+  </div>
+  <span class="pill lg {{ st[1] }}">{{ icon(st[2], 16) }}{{ st[0] }}</span>
+</div>
+
+<div class="deal-grid" data-watch="{{ url_for('deal_status', deal_id=deal['id']) }}" data-state="{{ watch_state }}">
+  <div class="col">
+
+    <section class="panel">
+      <ol class="tracker">
+        {% for s in steps %}
+        <li class="step {{ s.state }}">
+          <span class="dot">{{ icon('x' if s.state == 'bad' else ('check' if s.state == 'done' else s.icon), 18) }}</span>
+          <span class="lbl">{{ s.label }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2>{{ icon('file', 18) }}What is being traded</h2>
+      <p class="prose">{{ deal['description'] }}</p>
+    </section>
+
+    {# ───────── ACTIONS ───────── #}
+    {% if deal['status'] == 'pending_accept' %}
+    <section class="panel action">
+      {% if can_accept %}
+        <h2>Review and accept</h2>
+        <p class="muted">Accepting locks the terms and creates the deposit address for the buyer. The Litecoin amount is fixed at today's rate.</p>
+        <div class="row">
+          <form method="post" action="{{ url_for('accept', deal_id=deal['id']) }}">{{ csrf_input() }}
+            <button class="btn" type="submit">{{ icon('check', 18) }}<span>Accept deal</span></button></form>
+          <form method="post" action="{{ url_for('cancel', deal_id=deal['id']) }}">{{ csrf_input() }}
+            <button class="btn ghost danger" type="submit">{{ icon('x', 18) }}<span>Decline</span></button></form>
+        </div>
+      {% elif is_buyer or is_seller %}
+        <h2>Waiting for the other person</h2>
+        <p class="muted">They need to open this deal from their dashboard and accept it.</p>
+        <form method="post" action="{{ url_for('cancel', deal_id=deal['id']) }}">{{ csrf_input() }}
+          <button class="btn ghost danger" type="submit">{{ icon('x', 18) }}<span>Cancel request</span></button></form>
+      {% endif %}
+    </section>
+
+    {% elif deal['status'] == 'awaiting_deposit' %}
+    <section class="panel action">
+      {% if is_buyer %}
+        <h2>{{ icon('wallet', 18) }}Pay into escrow</h2>
+        <div class="deposit">
+          <img class="qr" src="{{ qr }}" alt="QR code for the deposit address" width="176" height="176">
+          <dl class="kv">
+            <div>
+              <dt>Send exactly</dt>
+              <dd class="mono big">{{ deal['ltc_amount'] }} LTC
+                <button type="button" class="icon-btn" data-copy="{{ deal['ltc_amount'] }}" aria-label="Copy amount">{{ icon('copy', 16) }}</button></dd>
+            </div>
+            <div>
+              <dt>To this address</dt>
+              <dd class="mono wrap">{{ deal['deposit_address'] }}
+                <button type="button" class="icon-btn" data-copy="{{ deal['deposit_address'] }}" aria-label="Copy address">{{ icon('copy', 16) }}</button></dd>
+            </div>
+            <div><dt>Pay before</dt><dd>{{ deal['deadline']|fmt_time }}</dd></div>
+          </dl>
+        </div>
+      {% else %}
+        <h2>{{ icon('clock', 18) }}Waiting for the buyer to pay</h2>
+        <p class="muted">The buyer has until {{ deal['deadline']|fmt_time }}. Don't send anything yet.</p>
+      {% endif %}
+
+      <div class="notice {{ 'wait' if deal['pay_state'] == 'pending' else ('bad' if deal['pay_state'] == 'underpaid' else 'idle') }}">
+        {% if deal['pay_state'] == 'pending' %}
+          {{ icon('clock', 18) }}<span>Payment of {{ deal['received_ltc'] }} LTC detected. Waiting for network confirmations. This page updates by itself.</span>
+        {% elif deal['pay_state'] == 'underpaid' %}
+          {{ icon('alert', 18) }}<span>{{ deal['received_ltc'] }} LTC arrived, which is {{ short }} LTC short. The buyer must send the rest to the same address.</span>
+        {% else %}
+          {{ icon('refresh', 18) }}<span>Watching the blockchain. This page updates by itself when the payment arrives.</span>
+        {% endif %}
+      </div>
+    </section>
+
+    {% elif deal['status'] == 'funded' or deal['status'] == 'releasing' %}
+    <section class="panel action">
+      <h2>{{ icon('lock', 18) }}Funds are locked in escrow</h2>
+      {% if deal['status'] == 'releasing' %}
+        <p class="muted">Sending the payout. This takes a moment.</p>
+      {% elif is_seller %}
+        <p class="muted">Deliver what was agreed. Once the buyer is happy they release the funds to your address.</p>
+      {% elif is_buyer %}
+        <p class="muted">Check what the seller delivered. Release the funds only when you are satisfied. This can't be undone.</p>
+      {% endif %}
+
+      {% if deal['status'] == 'funded' %}
+        {% if is_buyer %}
+          <div class="row">
+            {% if deal['seller_address'] %}
+            <form method="post" action="{{ url_for('release', deal_id=deal['id']) }}"
+                  onsubmit="return confirm('Release {{ seller_gets }} LTC to the seller? This cannot be undone.');">{{ csrf_input() }}
+              <button class="btn" type="submit">{{ icon('send', 18) }}<span>Release funds</span></button></form>
+            {% else %}
+              <div class="notice idle">{{ icon('clock', 18) }}<span>The seller hasn't added a payout address yet, so release is not available.</span></div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if is_buyer or is_seller %}
+        <details class="dispute">
+          <summary>{{ icon('flag', 16) }}<span>Something is wrong? Open a dispute</span></summary>
+          <form method="post" action="{{ url_for('dispute', deal_id=deal['id']) }}" class="form">{{ csrf_input() }}
+            <label>What happened
+              <textarea name="reason" rows="3" maxlength="500" required></textarea></label>
+            <button class="btn ghost danger" type="submit">{{ icon('flag', 16) }}<span>Open dispute</span></button>
+          </form>
+        </details>
+        {% endif %}
+      {% endif %}
+    </section>
+
+    {% elif deal['status'] == 'completed' %}
+    <section class="panel action">
+      <h2>{{ icon('check', 18) }}Deal completed</h2>
+      <p class="muted">{{ seller_gets }} LTC was sent to the seller on {{ deal['completed_at']|fmt_time }}.</p>
+      {% if deal['payout_txid'] and deal['payout_txid'] not in ('submitted',) %}
+      <a class="btn ghost" target="_blank" rel="noopener" href="https://blockchair.com/litecoin/transaction/{{ deal['payout_txid'] }}">{{ icon('external', 16) }}<span>View payout transaction</span></a>
+      {% endif %}
+    </section>
+
+    {% elif deal['status'] == 'disputed' %}
+    <section class="panel action">
+      <h2>{{ icon('flag', 18) }}This deal is in dispute</h2>
+      <p class="muted">The funds are frozen. Staff will review the deal and decide.</p>
+      {% if deal['dispute_reason'] %}<p class="prose quote">{{ deal['dispute_reason'] }}</p>{% endif %}
+    </section>
+
+    {% elif deal['status'] == 'refunded' %}
+    <section class="panel action">
+      <h2>{{ icon('arrow-left', 18) }}Refunded</h2>
+      <p class="muted">Staff sent the funds back to the buyer.</p>
+    </section>
+
+    {% else %}
+    <section class="panel action">
+      <h2>{{ icon('x-circle', 18) }}{{ st[0] }}</h2>
+      <p class="muted">Nothing more can happen on this deal. Create a new MM to start again.</p>
+    </section>
+    {% endif %}
+
+    {# Seller payout address #}
+    {% if is_seller and deal['status'] in ('awaiting_deposit', 'funded', 'disputed') %}
+    <section class="panel">
+      <h2>{{ icon('key', 18) }}Your payout address</h2>
+      <p class="muted">Where you receive the Litecoin when the buyer releases it. Double-check it, payouts can't be reversed.</p>
+      <form method="post" action="{{ url_for('set_payout_address', deal_id=deal['id']) }}" class="inline-form">{{ csrf_input() }}
+        <input name="address" class="mono" value="{{ deal['seller_address'] or '' }}" placeholder="ltc1..." required aria-label="Litecoin payout address" autocomplete="off">
+        <button class="btn" type="submit">{{ icon('check', 18) }}<span>Save address</span></button>
+      </form>
+    </section>
+    {% endif %}
+  </div>
+
+  <div class="col">
+    <section class="panel">
+      <h2>Parties</h2>
+      <dl class="kv">
+        <div><dt>{{ icon('wallet', 15) }}Buyer{% if is_buyer %} (you){% endif %}</dt><dd>{{ buyer_name }} <span class="mono muted">{{ deal['buyer_uid'] }}</span></dd></div>
+        <div><dt>{{ icon('send', 15) }}Seller{% if is_seller %} (you){% endif %}</dt><dd>{{ seller_name }} <span class="mono muted">{{ deal['seller_uid'] }}</span></dd></div>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>Amounts</h2>
+      <dl class="kv">
+        <div><dt>Deal value</dt><dd>{{ deal['usd_amount']|usd }}</dd></div>
+        {% if deal['ltc_amount'] %}
+        <div><dt>Buyer sends</dt><dd class="mono">{{ deal['ltc_amount'] }} LTC</dd></div>
+        <div><dt>Rate</dt><dd class="mono">{{ deal['ltc_rate']|usd }} per LTC</dd></div>
+        <div><dt>Fee ({{ FEE_PCT }}%)</dt><dd class="mono">{{ deal['fee_ltc'] }} LTC</dd></div>
+        <div><dt>Seller receives</dt><dd class="mono">{{ seller_gets }} LTC</dd></div>
+        <div class="note"><dt></dt><dd class="muted">The network fee is taken from the payout.</dd></div>
+        {% else %}
+        <div class="note"><dt></dt><dd class="muted">The Litecoin amount is set when the deal is accepted.</dd></div>
+        {% endif %}
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>Activity</h2>
+      <ul class="timeline">
+        {% for e in events %}
+        <li><span class="t-text">{{ e.text }}</span><span class="t-time">{{ e.ts|fmt_time }}</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    {% if is_admin and deal['error'] %}
+    <section class="panel">
+      <h2>{{ icon('alert', 18) }}Staff note</h2>
+      <p class="prose mono small">{{ deal['error'] }}</p>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

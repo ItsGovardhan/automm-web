@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Escrow for online trades | {% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <h1>Pay only when the deal is done.</h1>
+    <p class="lead">{{ BRAND }} holds the buyer's Litecoin in escrow, confirms the deposit on the blockchain by itself, and pays the seller once the buyer releases it.</p>
+    <div class="row">
+      <a class="btn lg" href="{{ url_for('register') }}">{{ icon('plus', 18) }}<span>Create account</span></a>
+      <a class="btn ghost lg" href="{{ url_for('login') }}">Log in</a>
+    </div>
+    <ol class="how">
+      <li>{{ icon('user', 20) }}<div><strong>Create an MM</strong><span>Enter the other person's User ID, the amount and what is being traded.</span></div></li>
+      <li>{{ icon('lock', 20) }}<div><strong>Buyer pays into escrow</strong><span>A fresh address is made for the deal. Payment is detected automatically.</span></div></li>
+      <li>{{ icon('send', 20) }}<div><strong>Release and payout</strong><span>When the buyer is happy, the seller is paid straight away.</span></div></li>
+    </ol>
+  </div>
+
+  <aside class="ticket" aria-label="Sample deal">
+    <div class="ticket-head">
+      <span class="mono">MM-4F2A9C1D07BE</span>
+      <span class="pill wait">{{ icon('lock', 14) }}Funds locked</span>
+    </div>
+    <p class="ticket-desc">Discord server handover, 2 admin roles and the vanity URL</p>
+    <ol class="tracker compact">
+      <li class="step done"><span class="dot">{{ icon('check', 16) }}</span><span class="lbl">Terms agreed</span></li>
+      <li class="step done"><span class="dot">{{ icon('check', 16) }}</span><span class="lbl">Payment received</span></li>
+      <li class="step current"><span class="dot">{{ icon('send', 16) }}</span><span class="lbl">Funds released</span></li>
+    </ol>
+    <dl class="kv two">
+      <div><dt>Deal value</dt><dd>$120.00</dd></div>
+      <div><dt>Locked</dt><dd class="mono">1.42130000 LTC</dd></div>
+      <div><dt>Buyer</dt><dd class="mono">U-7K3M9QXA</dd></div>
+      <div><dt>Seller</dt><dd class="mono">U-C48HTR2N</dd></div>
+    </dl>
+    <p class="ticket-note">Sample deal for illustration.</p>
+  </aside>
+</section>
+{% endblock %}

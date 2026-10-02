@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Staff | {% endblock %}
+{% block content %}
+<div class="page-head"><h1>Staff</h1></div>
+
+<section class="panel">
+  <h2>{{ icon('flag', 18) }}Disputes</h2>
+  {% if disputed %}
+    {% for d in disputed %}
+    <article class="case">
+      <div class="case-head">
+        <a class="mono" href="{{ url_for('deal_page', deal_id=d['id']) }}">{{ d['id'] }}</a>
+        <span>{{ d['usd_amount']|usd }}</span>
+      </div>
+      <p class="prose">{{ d['dispute_reason'] }}</p>
+      {% if d['error'] %}<p class="notice bad">{{ icon('alert', 18) }}<span>Payout was unclear. Check the Apirone account for an outgoing transaction before releasing or refunding.</span></p>{% endif %}
+      <dl class="kv two">
+        <div><dt>Received</dt><dd class="mono">{{ d['received_ltc'] or 'nothing' }} LTC</dd></div>
+        <div><dt>Seller address</dt><dd class="mono wrap">{{ d['seller_address'] or 'not set' }}</dd></div>
+      </dl>
+      <div class="row">
+        {% if d['funded_at'] and d['seller_address'] %}
+        <form method="post" action="{{ url_for('admin_release', deal_id=d['id']) }}"
+              onsubmit="return confirm('Release to the seller? This cannot be undone.');">{{ csrf_input() }}
+          <button class="btn" type="submit">{{ icon('send', 18) }}<span>Release to seller</span></button></form>
+        {% endif %}
+        {% if d['received_ltc'] %}
+        <form method="post" action="{{ url_for('admin_refund', deal_id=d['id']) }}" class="inline-form"
+              onsubmit="return confirm('Refund the buyer to this address? This cannot be undone.');">{{ csrf_input() }}
+          <input name="address" class="mono" placeholder="Buyer's LTC address" required aria-label="Buyer refund address" autocomplete="off">
+          <button class="btn ghost danger" type="submit">{{ icon('arrow-left', 18) }}<span>Refund buyer</span></button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  {% else %}
+    <p class="muted">No open disputes.</p>
+  {% endif %}
+</section>
+
+<section class="panel table-wrap">
+  <h2 class="pad">Recent deals</h2>
+  <table class="table">
+    <thead><tr><th>Deal</th><th>Buyer</th><th>Seller</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for d in recent %}
+      {% set st = status_meta[d['status']] %}
+      <tr>
+        <td><a class="mono" href="{{ url_for('deal_page', deal_id=d['id']) }}">{{ d['id'] }}</a></td>
+        <td class="mono">{{ d['buyer_uid'] }}</td><td class="mono">{{ d['seller_uid'] }}</td>
+        <td>{{ d['usd_amount']|usd }}</td>
+        <td><span class="pill {{ st[1] }}">{{ icon(st[2], 14) }}{{ st[0] }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

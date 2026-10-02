@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | {% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Your deals</h1>
+  <a class="btn" href="{{ url_for('new_mm') }}">{{ icon('plus', 18) }}<span>Create MM</span></a>
+</div>
+
+<section class="panel idcard">
+  <div>
+    <h2>Your User ID</h2>
+    <p class="muted">Give this to the person you are trading with. They need it to start a deal with you.</p>
+  </div>
+  <button type="button" class="copy big" data-copy="{{ g.user['uid'] }}">
+    <span class="mono">{{ g.user['uid'] }}</span>{{ icon('copy', 18) }}<span class="copy-label">Copy</span>
+  </button>
+</section>
+
+<section class="stats">
+  <div><span class="n">{{ active }}</span><span>Active</span></div>
+  <div><span class="n">{{ done }}</span><span>Completed</span></div>
+  <div><span class="n">{{ disputed }}</span><span>In dispute</span></div>
+</section>
+
+{% if deals %}
+<section class="panel table-wrap">
+  <table class="table">
+    <thead><tr><th>Deal</th><th>What</th><th>Your role</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for d in deals %}
+      {% set st = status_meta[d['status']] %}
+      <tr>
+        <td><a class="mono" href="{{ url_for('deal_page', deal_id=d['id']) }}">{{ d['id'] }}</a></td>
+        <td class="desc">{{ d['description'] }}</td>
+        <td>{{ 'Buyer' if d['buyer_uid'] == g.user['uid'] else 'Seller' }}</td>
+        <td>{{ d['usd_amount']|usd }}</td>
+        <td><span class="pill {{ st[1] }}">{{ icon(st[2], 14) }}{{ st[0] }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% else %}
+<section class="panel empty">
+  {{ icon('shield', 36) }}
+  <h2>No deals yet</h2>
+  <p class="muted">Create an MM and enter the other person's User ID to get started.</p>
+  <a class="btn" href="{{ url_for('new_mm') }}">{{ icon('plus', 18) }}<span>Create MM</span></a>
+</section>
+{% endif %}
+{% endblock %}

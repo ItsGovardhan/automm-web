@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Create MM | {% endblock %}
+{% block content %}
+<div class="page-head"><h1>Create MM</h1></div>
+<form method="post" class="panel form wide">
+  {{ csrf_input() }}
+  <label>Other person's User ID
+    <input name="partner" value="{{ form.partner }}" placeholder="U-XXXXXXXX" required maxlength="12" class="mono" autocomplete="off" autofocus>
+  </label>
+
+  <fieldset class="seg">
+    <legend>You are the</legend>
+    <label class="opt">
+      <input type="radio" name="role" value="buyer" {{ 'checked' if form.role == 'buyer' }}>
+      <span>{{ icon('wallet', 18) }}<strong>Buyer</strong><small>You pay into escrow</small></span>
+    </label>
+    <label class="opt">
+      <input type="radio" name="role" value="seller" {{ 'checked' if form.role == 'seller' }}>
+      <span>{{ icon('send', 18) }}<strong>Seller</strong><small>You get paid on release</small></span>
+    </label>
+  </fieldset>
+
+  <label>Amount in USD
+    <input name="amount" value="{{ form.amount }}" inputmode="decimal" placeholder="50.00" required class="mono">
+  </label>
+
+  <label>What is being traded
+    <textarea name="description" rows="4" maxlength="500" required placeholder="Describe the item or service and what counts as delivered.">{{ form.description }}</textarea>
+  </label>
+
+  <p class="hint">{{ icon('shield', 16) }}<span>The Litecoin amount is fixed at the rate when the other person accepts. A {{ FEE_PCT }}% fee is taken from the seller's payout. Limits: ${{ min_usd }} to ${{ '{:,}'.format(max_usd) }}.</span></p>
+
+  <button class="btn lg" type="submit">{{ icon('plus', 18) }}<span>Create MM</span></button>
+</form>
+{% endblock %}

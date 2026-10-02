@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}{{ BRAND }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{{ 'app' if g.user else 'site' }}">
+{% if g.user %}
+  <aside class="side">
+    <a class="brand" href="{{ url_for('dashboard') }}">{{ icon('shield-check', 24) }}<span>{{ BRAND }}</span></a>
+    <nav class="nav">
+      <a href="{{ url_for('dashboard') }}" class="{{ 'on' if request.endpoint == 'dashboard' }}">{{ icon('layout') }}<span>Dashboard</span></a>
+      <a href="{{ url_for('new_mm') }}" class="{{ 'on' if request.endpoint == 'new_mm' }}">{{ icon('plus') }}<span>Create MM</span></a>
+      {% if g.user['is_admin'] %}
+      <a href="{{ url_for('admin') }}" class="{{ 'on' if request.endpoint == 'admin' }}">{{ icon('key') }}<span>Staff</span></a>
+      {% endif %}
+    </nav>
+    <div class="me">
+      <div class="me-name">{{ icon('user', 16) }}<span>{{ g.user['username'] }}</span></div>
+      <button type="button" class="uid" data-copy="{{ g.user['uid'] }}" title="Copy your User ID">
+        <span class="mono">{{ g.user['uid'] }}</span>{{ icon('copy', 15) }}
+      </button>
+      <form method="post" action="{{ url_for('logout') }}">
+        {{ csrf_input() }}
+        <button class="link-btn" type="submit">{{ icon('log-out', 16) }}<span>Log out</span></button>
+      </form>
+    </div>
+  </aside>
+{% else %}
+  <header class="top">
+    <a class="brand" href="{{ url_for('home') }}">{{ icon('shield-check', 24) }}<span>{{ BRAND }}</span></a>
+    <nav class="top-nav">
+      <a class="btn ghost" href="{{ url_for('login') }}">{{ icon('log-in', 16) }}<span>Log in</span></a>
+      <a class="btn" href="{{ url_for('register') }}">Create account</a>
+    </nav>
+  </header>
+{% endif %}
+  <main class="main">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}<div class="flashes">
+        {% for cat, m in msgs %}<div class="flash {{ cat }}" role="status">{{ icon('check' if cat == 'ok' else 'alert', 18) }}<span>{{ m }}</span></div>{% endfor %}
+      </div>{% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</body>
+</html>
